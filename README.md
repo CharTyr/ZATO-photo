@@ -4,8 +4,7 @@
 
 ## 在线体验
 
-- **GitHub Pages**：https://chartyr.github.io/ZATO-photo/
-- **Cloudflare Workers**：https://zato-bg-generator.ichar.workers.dev
+- **GitHub Pages**：https://zato.karka.cc
 
 ## 实拍效果示例
 

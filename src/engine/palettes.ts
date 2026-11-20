@@ -80,10 +80,10 @@ export const BUILTIN_BASE_PALETTES: NamedPalette[] = [
     name: 'Archival Film Greys (24 tones)',
     nameZh: '档案胶片冷暖灰 24 阶',
     colors: [
-      '#000000', '#121316', '#1e1d1c', '#2b2d32', '#3a3937', '#4a4d54',
-      '#5b5a56', '#6b6f77', '#7d7b75', '#8c9199', '#9d9b94', '#adb2ba',
-      '#bebcb5', '#cfd3da', '#dfddd6', '#eef0f4', '#ffffff',
-      '#242a26', '#465048', '#6e7a70', '#96a298', '#c1cbc2', '#d7d0c4', '#4d443c',
+      '#000000', '#121316', '#1e1d1c', '#242a26', '#2b2d32', '#3a3937',
+      '#465048', '#4d443c', '#4a4d54', '#5b5a56', '#6b6f77', '#6e7a70',
+      '#7d7b75', '#8c9199', '#96a298', '#9d9b94', '#adb2ba', '#bebcb5',
+      '#c1cbc2', '#cfd3da', '#d7d0c4', '#dfddd6', '#eef0f4', '#ffffff',
     ],
     source: 'builtin',
   },
@@ -171,6 +171,14 @@ export const BUILTIN_COLOR_PALETTES: NamedPalette[] = [
     source: 'builtin',
   },
 ];
+
+export function sortPaletteByLuminance(colors: string[]): string[] {
+  return [...colors].sort((a, b) => {
+    const [ra, ga, ba] = hexToRgb(a);
+    const [rb, gb, bb] = hexToRgb(b);
+    return luminance709(ra, ga, ba) - luminance709(rb, gb, bb);
+  });
+}
 
 export function getAllBuiltinPalettes(): NamedPalette[] {
   return [...BUILTIN_BASE_PALETTES, ...BUILTIN_COLOR_PALETTES];

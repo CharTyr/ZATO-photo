@@ -17,6 +17,7 @@ import {
   extractPaletteFromRgba,
   getAllBuiltinPalettes,
   parsePaletteFile,
+  sortPaletteByLuminance,
 } from '../src/engine/palettes';
 import { applyDesaturate, applyPosterize, runZatoPipeline } from '../src/engine/pipeline';
 import { createDefaultConfig, mergeConfig, ZATO_PRESETS } from '../src/engine/presets';
@@ -373,5 +374,44 @@ describe('ZATO Pipeline & Performance', () => {
       expect([res.buffer.data[0], res.buffer.data[1], res.buffer.data[2]]).toEqual([227, 36, 0]);
       expect([res.buffer.data[8], res.buffer.data[9], res.buffer.data[10]]).toEqual([255, 224, 138]);
     }
+  });
+
+  it('produces true 0/255 impulse dots for saltPepper noise even when valueAction is loop or normalize', () => {
+    const palettes = getAllBuiltinPalettes();
+    const gray: PixelBuffer = {
+      width: 40,
+      height: 10,
+      data: new Uint8ClampedArray(40 * 10 * 4).fill(128),
+    };
+    for (let i = 3; i < gray.data.length; i += 4) gray.data[i] = 255;
+
+    for (const valueAction of ['cut', 'loop', 'normalize'] as const) {
+      const cfg = mergeConfig(createDefaultConfig(), {
+        desaturate: { enabled: false },
+        basePalettize: { enabled: false },
+        thresholds: { blackEnabled: false, whiteEnabled: false },
+        colouring: { mode: 'none', curvesEnabled: false },
+        noise: { enabled: true, amplitude: 30, type: 'saltPepper', channel: 'rgba_all', valueAction, seed: 42 },
+        posterize: { enabled: false },
+      });
+      const res = runZatoPipeline(gray, cfg, palettes, 'noise');
+      let zeroCount = 0;
+      let maxCount = 0;
+      for (let i = 0; i < res.buffer.data.length; i += 4) {
+        if (res.buffer.data[i] === 0) zeroCount++;
+        if (res.buffer.data[i] === 255) maxCount++;
+      }
+      expect(zeroCount).toBeGreaterThan(5);
+      expect(maxCount).toBeGreaterThan(5);
+    }
+  });
+
+  it('scales conical gradient cleanly and sorts palettes dark-to-light', () => {
+    const t1 = sampleGradientShape(0.8, 0.6, 'conical', 0, 0.5, 0.5, 1.0);
+    const t2 = sampleGradientShape(0.8, 0.6, 'conical', 0, 0.5, 0.5, 0.5);
+    expect(t2).toBeGreaterThan(t1);
+
+    const sorted = sortPaletteByLuminance(['#ffffff', '#808080', '#000000']);
+    expect(sorted).toEqual(['#000000', '#808080', '#ffffff']);
   });
 });

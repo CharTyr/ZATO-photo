@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { Download, ImagePlus, Plus, Trash2, Upload } from 'lucide-react';
+import { ArrowUpDown, Download, ImagePlus, Plus, Trash2, Upload } from 'lucide-react';
 import type { Lang, NamedPalette } from '../types';
 import {
   exportGimpGpl,
   exportJascPal,
   extractPaletteFromRgba,
   parsePaletteFile,
+  sortPaletteByLuminance,
 } from '../engine/palettes';
 import { t } from '../i18n';
 
@@ -32,6 +33,7 @@ export const PaletteManager: React.FC<PaletteManagerProps> = ({
   const imgInputRef = useRef<HTMLInputElement | null>(null);
   const pendingCloneIdRef = useRef<string | null>(null);
   const [extractCount, setExtractCount] = useState<number>(16);
+  const [extractDraft, setExtractDraft] = useState<string>('16');
   const [selectedSwatchIdx, setSelectedSwatchIdx] = useState<number | null>(null);
 
   const activePalette =
@@ -267,8 +269,8 @@ export const PaletteManager: React.FC<PaletteManagerProps> = ({
         </button>
       </div>
 
-      {/* Extraction Color Count + Export .PAL / .GPL */}
-      <div className="field-inline" style={{ gap: 6 }}>
+      {/* Extraction Color Count + Sort & Export .PAL / .GPL */}
+      <div className="field-inline" style={{ gap: 6, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
             {t(lang, '提取色数', 'Extract')}
@@ -277,15 +279,41 @@ export const PaletteManager: React.FC<PaletteManagerProps> = ({
             type="number"
             min={4}
             max={64}
-            value={extractCount}
+            value={extractDraft}
             style={{ width: 60, height: 30, fontSize: 13 }}
-            onChange={(e) =>
-              setExtractCount(Math.max(4, Math.min(64, Number(e.target.value) || 16)))
-            }
+            onChange={(e) => {
+              const raw = e.target.value;
+              setExtractDraft(raw);
+              const parsed = Number(raw);
+              if (Number.isFinite(parsed) && parsed >= 4 && parsed <= 64) {
+                setExtractCount(Math.round(parsed));
+              }
+            }}
+            onBlur={() => {
+              const parsed = Number(extractDraft);
+              const clamped = Number.isFinite(parsed)
+                ? Math.max(4, Math.min(64, Math.round(parsed)))
+                : 16;
+              setExtractCount(clamped);
+              setExtractDraft(String(clamped));
+            }}
           />
         </div>
         {activePalette && (
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 5 }}>
+            <button
+              type="button"
+              className="btn btn-sm btn-soft"
+              onClick={() => {
+                ensureEditableCopyAndMutate((cols) => sortPaletteByLuminance(cols));
+                setSelectedSwatchIdx(null);
+                onNotify(t(lang, '已按暗→亮顺序排列色板', 'Sorted swatches dark to light'));
+              }}
+              title={t(lang, '按亮度从暗到亮排列色板', 'Sort swatches dark to light')}
+            >
+              <ArrowUpDown size={12} />
+              {t(lang, '排序', 'Sort')}
+            </button>
             <button
               type="button"
               className="btn btn-sm btn-soft"

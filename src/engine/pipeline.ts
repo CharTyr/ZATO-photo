@@ -336,19 +336,106 @@ function applyAdditiveNoise(
     return;
   }
 
+  // Impulse Salt & Pepper noise: directly snaps selected pixels/channels to 0 or 255
+  // (avoids additive ±255 wrapping into r±1 under 'loop' or crushing contrast under 'normalize')
+  if (cfg.type === 'saltPepper') {
+    const prob = Math.min(0.6, amp / 140);
+    const halfProb = prob * 0.5;
+    const impulse = (orig: number): number => {
+      const u = rand();
+      if (u < halfProb) return 0;
+      if (u < prob) return 255;
+      return orig;
+    };
+    for (let p = 0; p < pixelCount; p++) {
+      const i = p << 2;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      switch (cfg.channel) {
+        case 'rgba_all':
+          data[i] = impulse(r);
+          data[i + 1] = impulse(g);
+          data[i + 2] = impulse(b);
+          break;
+        case 'rgb_red':
+          data[i] = impulse(r);
+          break;
+        case 'rgb_green':
+          data[i + 1] = impulse(g);
+          break;
+        case 'rgb_blue':
+          data[i + 2] = impulse(b);
+          break;
+        case 'ycbcr_y':
+        case 'lab_l':
+        case 'hsv_v': {
+          const u = rand();
+          if (u < halfProb) {
+            data[i] = 0;
+            data[i + 1] = 0;
+            data[i + 2] = 0;
+          } else if (u < prob) {
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
+          }
+          break;
+        }
+        case 'ycbcr_cbcr': {
+          const [y, cb, cr] = rgbToYcbcr(r, g, b);
+          const ncb = impulse(cb);
+          const ncr = impulse(cr);
+          const [nr, ng, nb] = ycbcrToRgb(y, ncb, ncr);
+          data[i] = clamp255(nr);
+          data[i + 1] = clamp255(ng);
+          data[i + 2] = clamp255(nb);
+          break;
+        }
+        case 'lab_ab': {
+          const [L, a, bb] = rgbToLab(r, g, b);
+          const ua = rand();
+          const ub = rand();
+          const na = ua < halfProb ? -90 : ua < prob ? 90 : a;
+          const nb2 = ub < halfProb ? -90 : ub < prob ? 90 : bb;
+          const [nr, ng, nb] = labToRgb(L, na, nb2);
+          data[i] = nr;
+          data[i + 1] = ng;
+          data[i + 2] = nb;
+          break;
+        }
+        case 'hsv_h': {
+          const u = rand();
+          if (u < prob) {
+            const [h, s, v] = rgbToHsv(r, g, b);
+            const [nr, ng, nb] = hsvToRgb((h + (u < halfProb ? 120 : 240)) % 360, Math.max(s, 0.35), v);
+            data[i] = nr;
+            data[i + 1] = ng;
+            data[i + 2] = nb;
+          }
+          break;
+        }
+        case 'hsv_s': {
+          const u = rand();
+          if (u < prob) {
+            const [h, , v] = rgbToHsv(r, g, b);
+            const [nr, ng, nb] = hsvToRgb(h, u < halfProb ? 0 : 1, v);
+            data[i] = nr;
+            data[i + 1] = ng;
+            data[i + 2] = nb;
+          }
+          break;
+        }
+      }
+    }
+    return;
+  }
+
   const sampleDelta = (): number => {
     if (cfg.type === 'gaussian') {
       return GAUSS_TABLE[nextU32() & GAUSS_TABLE_MASK] * amp;
     }
-    if (cfg.type === 'uniform') {
-      return (rand() * 2 - 1) * amp * 1.7320508;
-    }
-    // Salt & Pepper
-    const prob = Math.min(0.6, amp / 140);
-    const u = rand();
-    if (u < prob * 0.5) return -255;
-    if (u < prob) return 255;
-    return 0;
+    return (rand() * 2 - 1) * amp * 1.7320508;
   };
 
   const applyAction = (v: number): number => {

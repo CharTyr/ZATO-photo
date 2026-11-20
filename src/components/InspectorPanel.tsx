@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dices, Eye, FileJson, FolderUp, Grid2x2, RotateCcw } from 'lucide-react';
 import type {
   ColouringMode,
@@ -77,6 +77,17 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   onNotify,
 }) => {
   const jsonRef = useRef<HTMLInputElement | null>(null);
+  const [widthDraft, setWidthDraft] = useState<string>(String(config.canvas.customWidth));
+  const [heightDraft, setHeightDraft] = useState<string>(String(config.canvas.customHeight));
+
+  useEffect(() => {
+    setWidthDraft(String(config.canvas.customWidth));
+  }, [config.canvas.customWidth]);
+
+  useEffect(() => {
+    setHeightDraft(String(config.canvas.customHeight));
+  }, [config.canvas.customHeight]);
+
   const [openCards, setOpenCards] = useState<Record<string, boolean>>({
     canvas: false,
     desaturate: false,
@@ -204,16 +215,31 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   type="number"
                   min={64}
                   max={2560}
-                  value={config.canvas.customWidth}
-                  onChange={(e) =>
-                    onChangeConfig((c) => ({
-                      ...c,
-                      canvas: {
-                        ...c.canvas,
-                        customWidth: Math.max(64, Math.min(2560, Number(e.target.value) || 978)),
-                      },
-                    }))
-                  }
+                  value={widthDraft}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setWidthDraft(raw);
+                    const n = Number(raw);
+                    if (Number.isFinite(n) && n >= 64 && n <= 2560) {
+                      onChangeConfig((c) => ({
+                        ...c,
+                        canvas: { ...c.canvas, customWidth: Math.round(n) },
+                      }));
+                    }
+                  }}
+                  onBlur={() => {
+                    const n = Number(widthDraft);
+                    const clamped = Number.isFinite(n)
+                      ? Math.max(64, Math.min(2560, Math.round(n)))
+                      : config.canvas.customWidth;
+                    setWidthDraft(String(clamped));
+                    if (clamped !== config.canvas.customWidth) {
+                      onChangeConfig((c) => ({
+                        ...c,
+                        canvas: { ...c.canvas, customWidth: clamped },
+                      }));
+                    }
+                  }}
                 />
               </div>
               <div className="field-row">
@@ -222,16 +248,31 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   type="number"
                   min={64}
                   max={2560}
-                  value={config.canvas.customHeight}
-                  onChange={(e) =>
-                    onChangeConfig((c) => ({
-                      ...c,
-                      canvas: {
-                        ...c.canvas,
-                        customHeight: Math.max(64, Math.min(2560, Number(e.target.value) || 404)),
-                      },
-                    }))
-                  }
+                  value={heightDraft}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setHeightDraft(raw);
+                    const n = Number(raw);
+                    if (Number.isFinite(n) && n >= 64 && n <= 2560) {
+                      onChangeConfig((c) => ({
+                        ...c,
+                        canvas: { ...c.canvas, customHeight: Math.round(n) },
+                      }));
+                    }
+                  }}
+                  onBlur={() => {
+                    const n = Number(heightDraft);
+                    const clamped = Number.isFinite(n)
+                      ? Math.max(64, Math.min(2560, Math.round(n)))
+                      : config.canvas.customHeight;
+                    setHeightDraft(String(clamped));
+                    if (clamped !== config.canvas.customHeight) {
+                      onChangeConfig((c) => ({
+                        ...c,
+                        canvas: { ...c.canvas, customHeight: clamped },
+                      }));
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -425,7 +466,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   }))
                 }
               >
-                <option value="noise">{t(lang, 'Noise 噪点（推荐）', 'Noise (PDF)')}</option>
+                <option value="noise">{t(lang, 'Noise 噪点（推荐）', 'Noise (Rec.)')}</option>
                 <option value="bayer4">Pattern · Bayer 4×4</option>
                 <option value="bayer8">Pattern · Bayer 8×8</option>
               </select>
@@ -478,57 +519,61 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   }))
                 }
               />
-              <div className="grid-2">
-                <div className="field-row">
-                  <span className="field-label">{t(lang, '通道模式', 'Color Mode')}</span>
-                  <select
-                    value={config.basePalettize.colorMode}
-                    onChange={(e) =>
-                      onChangeConfig((c) => ({
-                        ...c,
-                        basePalettize: {
-                          ...c.basePalettize,
-                          colorMode: e.target.value as DitherColorMode,
-                        },
-                      }))
-                    }
-                  >
-                    <option value="per_channel">Per Channel Offset</option>
-                    <option value="luminance">Luminance Offset</option>
-                  </select>
-                </div>
-                <div className="field-row">
-                  <span className="field-label">{t(lang, '种子 Seed', 'Seed')}</span>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <input
-                      type="number"
-                      value={config.basePalettize.seed}
-                      onChange={(e) =>
-                        onChangeConfig((c) => ({
-                          ...c,
-                          basePalettize: {
-                            ...c.basePalettize,
-                            seed: Number(e.target.value) || 0,
-                          },
-                        }))
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-icon-sm"
-                      style={{ height: 28, width: 28 }}
-                      onClick={() =>
-                        onChangeConfig((c) => ({
-                          ...c,
-                          basePalettize: { ...c.basePalettize, seed: randSeed() },
-                        }))
-                      }
-                    >
-                      <Dices size={12} />
-                    </button>
+              {config.basePalettize.thresholdMode === 'noise' && (
+                <div className="grid-2">
+                  {config.basePalettize.colorSpace !== 'luminance' && (
+                    <div className="field-row">
+                      <span className="field-label">{t(lang, '通道模式', 'Color Mode')}</span>
+                      <select
+                        value={config.basePalettize.colorMode}
+                        onChange={(e) =>
+                          onChangeConfig((c) => ({
+                            ...c,
+                            basePalettize: {
+                              ...c.basePalettize,
+                              colorMode: e.target.value as DitherColorMode,
+                            },
+                          }))
+                        }
+                      >
+                        <option value="per_channel">Per Channel Offset</option>
+                        <option value="luminance">Luminance Offset</option>
+                      </select>
+                    </div>
+                  )}
+                  <div className="field-row">
+                    <span className="field-label">{t(lang, '种子 Seed', 'Seed')}</span>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <input
+                        type="number"
+                        value={config.basePalettize.seed}
+                        onChange={(e) =>
+                          onChangeConfig((c) => ({
+                            ...c,
+                            basePalettize: {
+                              ...c.basePalettize,
+                              seed: Number(e.target.value) || 0,
+                            },
+                          }))
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-icon-sm"
+                        style={{ height: 36, width: 36 }}
+                        onClick={() =>
+                          onChangeConfig((c) => ({
+                            ...c,
+                            basePalettize: { ...c.basePalettize, seed: randSeed() },
+                          }))
+                        }
+                      >
+                        <Dices size={13} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </StepCard>
@@ -589,9 +634,13 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           <div className="grid-2">
             <div className="field-row">
               <span className="field-label">{t(lang, '暗部替换色', 'Shadow Tint')}</span>
-              <label className="color-chip-input">
+              <label
+                className="color-chip-input"
+                style={{ opacity: config.thresholds.blackEnabled ? 1 : 0.45 }}
+              >
                 <input
                   type="color"
+                  disabled={!config.thresholds.blackEnabled}
                   value={config.thresholds.blackColor}
                   onChange={(e) =>
                     onChangeConfig((c) => ({
@@ -671,9 +720,13 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           <div className="grid-2">
             <div className="field-row">
               <span className="field-label">{t(lang, '高光替换色', 'Highlight Tint')}</span>
-              <label className="color-chip-input">
+              <label
+                className="color-chip-input"
+                style={{ opacity: config.thresholds.whiteEnabled ? 1 : 0.45 }}
+              >
                 <input
                   type="color"
+                  disabled={!config.thresholds.whiteEnabled}
                   value={config.thresholds.whiteColor}
                   onChange={(e) =>
                     onChangeConfig((c) => ({
@@ -703,10 +756,10 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             />
           </div>
 
-          {/* Page 4 Side Note: Quick Apartment Door Tinted B&W Swatches */}
+          {/* Quick B&W Tint Swatches */}
           <div className="field-row" style={{ gap: 5 }}>
             <span className="sub-note">
-              {t(lang, '教程 P4 附注 · 快捷黑白染色（公寓门同款）：', 'PDF p.4 Note · Quick B&W Tints:')}
+              {t(lang, '快捷黑白染色：', 'Quick B&W Tints:')}
             </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
               {DOOR_TINT_SWATCHES.map((sw) => (
@@ -720,6 +773,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       ...c,
                       thresholds: {
                         ...c.thresholds,
+                        blackEnabled: true,
+                        whiteEnabled: true,
                         blackColor: sw.black,
                         whiteColor: sw.white,
                       },
@@ -938,47 +993,91 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       }))
                     }
                   />
-                  <div className="field-inline">
-                    <span className="field-label">{t(lang, '随机种子 Seed', 'Seed')}</span>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <input
-                        type="number"
-                        style={{ width: 92 }}
-                        value={config.colouring.colorPalettize.seed}
-                        onChange={(e) =>
-                          onChangeConfig((c) => ({
-                            ...c,
-                            colouring: {
-                              ...c.colouring,
-                              colorPalettize: {
-                                ...c.colouring.colorPalettize,
-                                seed: Number(e.target.value) || 0,
-                              },
-                            },
-                          }))
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-icon-sm"
-                        style={{ height: 28, width: 28 }}
-                        onClick={() =>
-                          onChangeConfig((c) => ({
-                            ...c,
-                            colouring: {
-                              ...c.colouring,
-                              colorPalettize: {
-                                ...c.colouring.colorPalettize,
-                                seed: randSeed(),
-                              },
-                            },
-                          }))
-                        }
-                      >
-                        <Dices size={12} />
-                      </button>
+                  <SliderField
+                    label={t(lang, '扩散强度 Spread', 'Spread')}
+                    value={config.colouring.colorPalettize.spread}
+                    min={0}
+                    max={1}
+                    step={0.02}
+                    defaultValue={1.0}
+                    formatValue={(v) => v.toFixed(3)}
+                    onChange={(v) =>
+                      onChangeConfig((c) => ({
+                        ...c,
+                        colouring: {
+                          ...c.colouring,
+                          colorPalettize: { ...c.colouring.colorPalettize, spread: v },
+                        },
+                      }))
+                    }
+                  />
+                  {config.colouring.colorPalettize.thresholdMode === 'noise' && (
+                    <div className="grid-2">
+                      {config.colouring.colorPalettize.colorSpace !== 'luminance' && (
+                        <div className="field-row">
+                          <span className="field-label">{t(lang, '通道模式', 'Color Mode')}</span>
+                          <select
+                            value={config.colouring.colorPalettize.colorMode}
+                            onChange={(e) =>
+                              onChangeConfig((c) => ({
+                                ...c,
+                                colouring: {
+                                  ...c.colouring,
+                                  colorPalettize: {
+                                    ...c.colouring.colorPalettize,
+                                    colorMode: e.target.value as DitherColorMode,
+                                  },
+                                },
+                              }))
+                            }
+                          >
+                            <option value="per_channel">Per Channel Offset</option>
+                            <option value="luminance">Luminance Offset</option>
+                          </select>
+                        </div>
+                      )}
+                      <div className="field-row">
+                        <span className="field-label">{t(lang, '随机种子 Seed', 'Seed')}</span>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <input
+                            type="number"
+                            value={config.colouring.colorPalettize.seed}
+                            onChange={(e) =>
+                              onChangeConfig((c) => ({
+                                ...c,
+                                colouring: {
+                                  ...c.colouring,
+                                  colorPalettize: {
+                                    ...c.colouring.colorPalettize,
+                                    seed: Number(e.target.value) || 0,
+                                  },
+                                },
+                              }))
+                            }
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-icon-sm"
+                            style={{ height: 36, width: 36 }}
+                            onClick={() =>
+                              onChangeConfig((c) => ({
+                                ...c,
+                                colouring: {
+                                  ...c.colouring,
+                                  colorPalettize: {
+                                    ...c.colouring.colorPalettize,
+                                    seed: randSeed(),
+                                  },
+                                },
+                              }))
+                            }
+                          >
+                            <Dices size={13} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
             </>
@@ -1070,7 +1169,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     }
                   >
                     <option value="grainMerge">
-                      {t(lang, 'Grain Merge 颗粒合并 (P12)', 'Grain Merge (PDF p.12)')}
+                      {t(lang, 'Grain Merge 颗粒合并', 'Grain Merge')}
                     </option>
                     <option value="overlay">Overlay 叠加</option>
                     <option value="softLight">Soft Light 柔光</option>
@@ -1125,6 +1224,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   min={0}
                   max={360}
                   defaultValue={135}
+                  disabled={config.colouring.overlayShape === 'radial'}
                   formatValue={(v) => `${v}°`}
                   onChange={(v) =>
                     onChangeConfig((c) => ({
@@ -1187,10 +1287,10 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
           <div className="divider" />
 
-          {/* Color Adjustment Curves (Page 6) */}
+          {/* Color Adjustment Curves */}
           <div className="field-inline">
             <span className="field-label" style={{ fontWeight: 600, color: 'var(--ink)' }}>
-              {t(lang, '反差曲线 · Color Adjustment Curves (P6)', 'Contrast Curves (P6)')}
+              {t(lang, '反差曲线 · Tone Curves', 'Tone Curves')}
             </span>
             <button
               type="button"
@@ -1232,7 +1332,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           onToggleOpen={() => toggleCard('noise')}
         >
           <SliderField
-            label={t(lang, '振幅 Amplitude（教程 7.6）', 'Amplitude (PDF: 7.6)')}
+            label={t(lang, '振幅 Amplitude（默认 7.6）', 'Amplitude (Default: 7.6)')}
             value={config.noise.amplitude}
             min={0}
             max={50}
@@ -1264,6 +1364,11 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             <div className="field-row">
               <span className="field-label">{t(lang, '溢出处理', 'Value Action')}</span>
               <select
+                disabled={
+                  config.noise.type === 'saltPepper' ||
+                  config.noise.channel.startsWith('lab_') ||
+                  config.noise.channel.startsWith('hsv_')
+                }
                 value={config.noise.valueAction}
                 onChange={(e) =>
                   onChangeConfig((c) => ({
@@ -1280,7 +1385,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           </div>
 
           <div className="field-row">
-            <span className="field-label">{t(lang, "作用通道 Channel(s)", 'Channel(s)')}</span>
+            <span className="field-label">{t(lang, '作用通道 Channel(s)', 'Channel(s)')}</span>
             <select
               value={config.noise.channel}
               onChange={(e) =>
@@ -1290,7 +1395,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 }))
               }
             >
-              <option value="rgba_all">RGBA [All]（教程默认 · 微彩噪点）</option>
+              <option value="rgba_all">RGBA [All]（默认 · 微彩噪点）</option>
               <option value="ycbcr_y">YCbCr [Luminance]（纯亮度胶片颗粒）</option>
               <option value="ycbcr_cbcr">YCbCr [Blue-Red Chrominances]（纯色度噪点）</option>
               <option value="rgb_red">RGB [Red]</option>
@@ -1321,7 +1426,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               <button
                 type="button"
                 className="btn btn-icon-sm"
-                style={{ height: 28, width: 28 }}
+                style={{ height: 36, width: 36 }}
                 onClick={() =>
                   onChangeConfig((c) => ({
                     ...c,
@@ -1329,7 +1434,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   }))
                 }
               >
-                <Dices size={12} />
+                <Dices size={13} />
               </button>
             </div>
           </div>

@@ -360,11 +360,15 @@ export const SimpleControls: React.FC<SimpleControlsProps> = ({
               </div>
             ) : null}
 
-            <div className="divider" />
+            {config.colouring.mode !== 'none' && <div className="divider" />}
 
             <SliderField
               label={t(lang, '暗部深度', 'Shadow Depth')}
-              value={config.thresholds.blackThreshold}
+              value={
+                config.thresholds.blackEnabled
+                  ? Math.min(160, Math.max(0, config.thresholds.blackThreshold))
+                  : 0
+              }
               min={0}
               max={160}
               defaultValue={66}
@@ -379,7 +383,11 @@ export const SimpleControls: React.FC<SimpleControlsProps> = ({
 
             <SliderField
               label={t(lang, '高光留白', 'Highlight Blowout')}
-              value={255 - config.thresholds.whiteThreshold}
+              value={
+                config.thresholds.whiteEnabled
+                  ? Math.min(160, Math.max(0, 255 - config.thresholds.whiteThreshold))
+                  : 0
+              }
               min={0}
               max={160}
               defaultValue={255 - 196}
@@ -398,7 +406,7 @@ export const SimpleControls: React.FC<SimpleControlsProps> = ({
 
             <SliderField
               label={t(lang, '胶片颗粒', 'Film Grain')}
-              value={config.noise.enabled ? config.noise.amplitude : 0}
+              value={config.noise.enabled ? Math.min(28, Math.max(0, config.noise.amplitude)) : 0}
               min={0}
               max={28}
               step={0.4}
@@ -414,7 +422,11 @@ export const SimpleControls: React.FC<SimpleControlsProps> = ({
 
             <SliderField
               label={t(lang, '复古色阶', 'Retro Banding')}
-              value={config.posterize.enabled ? config.posterize.levels : 32}
+              value={
+                config.posterize.enabled
+                  ? Math.min(32, Math.max(3, config.posterize.levels))
+                  : 32
+              }
               min={3}
               max={32}
               step={1}

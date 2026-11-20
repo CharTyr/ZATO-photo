@@ -234,9 +234,9 @@ export function sampleGradientShape(
     case 'conical': {
       const a = Math.atan2(dy, dx) - rad;
       let norm = ((a / (2 * Math.PI)) % 1 + 1) % 1;
-      // Symmetric conical sweep (0 -> 1 -> 0)
+      // Symmetric conical sweep (0 -> 1 -> 0), scaled cleanly by invScale
       norm = norm <= 0.5 ? norm * 2 : (1 - norm) * 2;
-      return clamp01(norm);
+      return clamp01(norm * invScale);
     }
   }
 }

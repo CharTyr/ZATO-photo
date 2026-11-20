@@ -40,7 +40,8 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({
   const handleBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!barRef.current || e.target !== barRef.current) return;
     const rect = barRef.current.getBoundingClientRect();
-    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const rawPos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const pos = reverse ? 1 - rawPos : rawPos;
     const newStop: GradientStop = {
       id: `stop_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
       position: Number(pos.toFixed(3)),
@@ -60,7 +61,8 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({
   const handlePinPointerMove = (id: string, e: React.PointerEvent<HTMLDivElement>) => {
     if (draggingId !== id || !barRef.current) return;
     const rect = barRef.current.getBoundingClientRect();
-    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const rawPos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const pos = reverse ? 1 - rawPos : rawPos;
     onChangeStops(
       sorted.map((s) => (s.id === id ? { ...s, position: Number(pos.toFixed(3)) } : s)),
     );

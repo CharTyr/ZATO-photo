@@ -408,6 +408,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               >
                 <option value="lab">CIE Lab</option>
                 <option value="rgb">sRGB</option>
+                <option value="luminance">{t(lang, '按明度顺序', 'Luminance Ramp')}</option>
               </select>
             </div>
             <div className="field-row">
@@ -850,7 +851,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
               <div className="grid-2">
                 <div className="field-row">
-                  <span className="field-label">{t(lang, '色彩空间', 'Color Space')}</span>
+                  <span className="field-label">{t(lang, '匹配方式', 'Matching')}</span>
                   <select
                     value={config.colouring.colorPalettize.colorSpace}
                     onChange={(e) =>
@@ -866,8 +867,11 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       }))
                     }
                   >
-                    <option value="lab">CIE Lab</option>
-                    <option value="rgb">sRGB</option>
+                    <option value="luminance">
+                      {t(lang, '按明度逐阶（推荐）', 'Luminance Ramp (Rec.)')}
+                    </option>
+                    <option value="lab">CIE Lab (3D)</option>
+                    <option value="rgb">sRGB (3D)</option>
                   </select>
                 </div>
                 <div className="field-row">
@@ -887,7 +891,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       }))
                     }
                   >
-                    <option value="noise">Noise (PDF)</option>
+                    <option value="noise">Noise 噪点</option>
                     <option value="bayer4">Bayer 4×4</option>
                     <option value="bayer8">Bayer 8×8</option>
                   </select>

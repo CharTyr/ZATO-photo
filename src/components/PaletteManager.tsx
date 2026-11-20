@@ -30,11 +30,16 @@ export const PaletteManager: React.FC<PaletteManagerProps> = ({
 }) => {
   const palInputRef = useRef<HTMLInputElement | null>(null);
   const imgInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingCloneIdRef = useRef<string | null>(null);
   const [extractCount, setExtractCount] = useState<number>(16);
   const [selectedSwatchIdx, setSelectedSwatchIdx] = useState<number | null>(null);
 
   const activePalette =
     palettes.find((p) => p.id === selectedPaletteId) ?? palettes[0];
+
+  if (activePalette && activePalette.id === pendingCloneIdRef.current) {
+    pendingCloneIdRef.current = null;
+  }
 
   const handleImportPaletteFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -129,9 +134,16 @@ export const PaletteManager: React.FC<PaletteManagerProps> = ({
     const nextColors = mutator([...activePalette.colors]);
     if (nextColors.length < 2) return;
     if (activePalette.source === 'builtin') {
+      if (pendingCloneIdRef.current) {
+        onUpdatePaletteColors(pendingCloneIdRef.current, nextColors);
+        return;
+      }
+      const cloneId = `edited_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`;
+      pendingCloneIdRef.current = cloneId;
       const cloned: NamedPalette = {
-        id: `edited_${Date.now().toString(36)}`,
+        id: cloneId,
         name: `${activePalette.name} (Edited)`,
+        nameZh: activePalette.nameZh ? `${activePalette.nameZh}（已改）` : undefined,
         colors: nextColors,
         source: 'imported',
       };
@@ -147,13 +159,14 @@ export const PaletteManager: React.FC<PaletteManagerProps> = ({
       <div className="field-label">
         <span>{t(lang, '调色板 Palette', 'Palette')}</span>
         <span className="field-value" style={{ color: 'var(--muted)' }}>
-          {activePalette?.colors.length ?? 0} {t(lang, '色', 'colors')}
+          {activePalette?.colors.length ?? 0} {t(lang, '色（暗→亮）', 'colors (dark→light)')}
         </span>
       </div>
 
       <select
         value={activePalette?.id ?? ''}
         onChange={(e) => {
+          pendingCloneIdRef.current = null;
           onSelectPalette(e.target.value);
           setSelectedSwatchIdx(null);
         }}
@@ -170,7 +183,7 @@ export const PaletteManager: React.FC<PaletteManagerProps> = ({
         <div className="swatch-grid">
           {activePalette.colors.map((hex, idx) => (
             <button
-              key={`${hex}-${idx}`}
+              key={idx}
               type="button"
               className={`swatch-tile ${selectedSwatchIdx === idx ? 'selected' : ''}`}
               style={{ background: hex }}
@@ -201,9 +214,15 @@ export const PaletteManager: React.FC<PaletteManagerProps> = ({
             <button
               type="button"
               className="btn btn-sm"
-              onClick={() =>
-                ensureEditableCopyAndMutate((cols) => [...cols, '#808080'])
-              }
+              onClick={() => {
+                const insertAt = selectedSwatchIdx + 1;
+                const seedColor = activePalette.colors[selectedSwatchIdx] ?? '#808080';
+                ensureEditableCopyAndMutate((cols) => {
+                  cols.splice(insertAt, 0, seedColor);
+                  return cols;
+                });
+                setSelectedSwatchIdx(insertAt);
+              }}
             >
               <Plus size={11} />
               {t(lang, '增色', 'Add')}

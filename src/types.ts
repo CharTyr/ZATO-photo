@@ -13,7 +13,7 @@ export type DesaturateMode =
   | 'min'
   | 'max';
 
-export type PalettizeColorSpace = 'lab' | 'rgb';
+export type PalettizeColorSpace = 'luminance' | 'lab' | 'rgb';
 export type DitherThresholdMode = 'noise' | 'bayer4' | 'bayer8';
 export type DitherColorMode = 'per_channel' | 'luminance';
 

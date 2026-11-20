@@ -91,10 +91,12 @@ function resampleSourceToBuffer(src: SourceImageLike, cfg: ZatoConfig): PixelBuf
   return { width: dstW, height: dstH, data: imgData.data };
 }
 
+const BUILTIN_PALETTES = getAllBuiltinPalettes();
+
 export const App: React.FC = () => {
   const [lang, setLang] = useState<Lang>('zh');
   const [config, setConfig] = useState<ZatoConfig>(() => createDefaultConfig());
-  const [palettes, setPalettes] = useState<NamedPalette[]>(() => getAllBuiltinPalettes());
+  const [palettes, setPalettes] = useState<NamedPalette[]>(() => BUILTIN_PALETTES);
   const [activePresetId, setActivePresetId] = useState<string | null>(ZATO_PRESETS[0].id);
   const [activeStage, setActiveStage] = useState<PipelineStageId>('final');
 
@@ -126,10 +128,10 @@ export const App: React.FC = () => {
 
   const isProMode = isMobile ? mobileTab === 'pro' : desktopTab === 'pro';
 
-  // Generate live mini thumbnail previews of the active photo across all 10 ZATO presets
+  // Generate live mini thumbnail previews of the active photo across all 10 presets
   const presetThumbs = useMemo(() => {
-    return generatePresetThumbnails(sourceMedia, ZATO_PRESETS, palettes);
-  }, [sourceMedia, palettes]);
+    return generatePresetThumbnails(sourceMedia, ZATO_PRESETS, BUILTIN_PALETTES);
+  }, [sourceMedia]);
 
   // Paint soft live optical ambient backdrop derived from the current processed artwork
   useEffect(() => {

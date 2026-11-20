@@ -296,4 +296,82 @@ describe('ZATO Pipeline & Performance', () => {
       }
     }
   });
+
+  it('renders vivid edited palette swatches (e.g. #e32400 red) cleanly on grayscale highlights in luminance ramp mode', () => {
+    const editedPalettes = [
+      ...getAllBuiltinPalettes(),
+      {
+        id: 'edited_cyan_red',
+        name: 'Edited Cyan + Red',
+        colors: ['#020a0d', '#0d323c', '#2d7282', '#e32400', '#e32400'],
+        source: 'imported' as const,
+      },
+    ];
+    // Pure bright white pixel should map to the last swatch (#e32400), NOT collapse back to dark teal!
+    const bright: PixelBuffer = {
+      width: 2,
+      height: 1,
+      data: new Uint8ClampedArray([10, 10, 10, 255, 250, 250, 250, 255]),
+    };
+    const cfg = mergeConfig(createDefaultConfig(), {
+      basePalettize: { enabled: false },
+      thresholds: { blackEnabled: false, whiteEnabled: false },
+      colouring: {
+        mode: 'palettize',
+        curvesEnabled: false,
+        colorPalettize: {
+          paletteId: 'edited_cyan_red',
+          colorSpace: 'luminance',
+          dither: false,
+          thresholdMode: 'noise',
+          seed: 1,
+          spread: 1,
+          colorMode: 'per_channel',
+          offsetScale: 0,
+        },
+      },
+      noise: { enabled: false },
+      posterize: { enabled: false },
+    });
+    const res = runZatoPipeline(bright, cfg, editedPalettes, 'final');
+    // Dark pixel -> #020a0d
+    expect([res.buffer.data[0], res.buffer.data[1], res.buffer.data[2]]).toEqual([2, 10, 13]);
+    // Bright pixel -> #e32400 (227, 36, 0)
+    expect([res.buffer.data[4], res.buffer.data[5], res.buffer.data[6]]).toEqual([227, 36, 0]);
+  });
+
+  it('preserves custom Step 3 Shadow/Highlight tints across HSV, Gradient Map, and Palettize colouring', () => {
+    const palettes = getAllBuiltinPalettes();
+    const img: PixelBuffer = {
+      width: 3,
+      height: 1,
+      data: new Uint8ClampedArray([
+        12, 12, 12, 255, // shadow
+        128, 128, 128, 255, // midtone
+        245, 245, 245, 255, // highlight
+      ]),
+    };
+
+    for (const mode of ['colourized', 'gradientMap', 'palettize'] as const) {
+      const cfg = mergeConfig(createDefaultConfig(), {
+        basePalettize: { enabled: false },
+        thresholds: {
+          blackEnabled: true,
+          blackThreshold: 60,
+          blackColor: '#e32400',
+          blackOpacity: 1,
+          whiteEnabled: true,
+          whiteThreshold: 200,
+          whiteColor: '#ffe08a',
+          whiteOpacity: 1,
+        },
+        colouring: { mode, curvesEnabled: false },
+        noise: { enabled: false },
+        posterize: { enabled: false },
+      });
+      const res = runZatoPipeline(img, cfg, palettes, 'final');
+      expect([res.buffer.data[0], res.buffer.data[1], res.buffer.data[2]]).toEqual([227, 36, 0]);
+      expect([res.buffer.data[8], res.buffer.data[9], res.buffer.data[10]]).toEqual([255, 224, 138]);
+    }
+  });
 });

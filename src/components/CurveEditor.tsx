@@ -95,9 +95,10 @@ export const CurveEditor: React.FC<CurveEditorProps> = ({
       setDraggingIdx(hitIdx);
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
     } else {
-      // Add new point and drag it
-      const next = [...sortedPoints, pt].sort((a, b) => a.x - b.x);
-      const newIdx = next.findIndex((p) => p.x === pt.x && p.y === pt.y);
+      // Clamp new interior control point away from x=0 / x=255 endpoints
+      const clampedPt = { x: Math.max(2, Math.min(253, pt.x)), y: pt.y };
+      const next = [...sortedPoints, clampedPt].sort((a, b) => a.x - b.x);
+      const newIdx = next.findIndex((p) => p.x === clampedPt.x && p.y === clampedPt.y);
       onChange(next);
       setSelectedIdx(newIdx);
       setDraggingIdx(newIdx);
@@ -144,11 +145,11 @@ export const CurveEditor: React.FC<CurveEditorProps> = ({
   return (
     <div className="curve-box">
       <div className="field-inline">
-        <span className="field-label" style={{ fontSize: 11 }}>
-          {t(lang, '色调曲线 (Ctrl+M)', 'Tone Curve (Ctrl+M)')}
+        <span className="field-label" style={{ fontSize: 12.5 }}>
+          {t(lang, '色调曲线', 'Tone Curve')}
         </span>
         <select
-          style={{ width: 'auto', height: 22, fontSize: 11, padding: '0 6px' }}
+          style={{ width: 'auto', height: 30, fontSize: 12, padding: '0 8px' }}
           value=""
           onChange={(e) => {
             const preset = CURVE_PRESETS.find((p) => p.id === e.target.value);
@@ -193,7 +194,7 @@ export const CurveEditor: React.FC<CurveEditorProps> = ({
         {/* Control points */}
         {sortedPoints.map((p, idx) => (
           <circle
-            key={`${idx}-${p.x}`}
+            key={idx}
             cx={toSvgX(p.x)}
             cy={toSvgY(p.y)}
             r={idx === selectedIdx ? 5.8 : 4.4}

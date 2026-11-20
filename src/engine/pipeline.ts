@@ -189,6 +189,36 @@ export function applyPalettize(
   const perChannel = params.colorMode === 'per_channel';
   const colorSpace = params.colorSpace;
 
+  // Fast tonal-ramp mode: maps pixel luminance (with optional Noise/Bayer dither)
+  // directly across palette swatches 0..(N-1) so every edited/vivid swatch is guaranteed visible
+  if (colorSpace === 'luminance') {
+    const maxIdx = Math.max(0, pal.count - 1);
+    const inv255 = maxIdx / 255;
+    let idx = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let lum = 0.2126 * data[idx] + 0.7152 * data[idx + 1] + 0.0722 * data[idx + 2];
+        if (doDither) {
+          if (thresholdMode === 'noise') {
+            lum += (hashPixelChannel(x, y, 0, seed) - 0.5) * scale255;
+          } else if (thresholdMode === 'bayer4') {
+            lum += (BAYER_4X4[((y & 3) << 2) | (x & 3)] - 0.5) * scale255;
+          } else {
+            lum += (BAYER_8X8[((y & 7) << 3) | (x & 7)] - 0.5) * scale255;
+          }
+          if (lum < 0) lum = 0;
+          else if (lum > 255) lum = 255;
+        }
+        const palIdx = Math.round(lum * inv255) * 3;
+        data[idx] = pRgb[palIdx];
+        data[idx + 1] = pRgb[palIdx + 1];
+        data[idx + 2] = pRgb[palIdx + 2];
+        idx += 4;
+      }
+    }
+    return;
+  }
+
   let idx = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -574,6 +604,8 @@ export function runZatoPipeline(
   const whiteRgb: RGB = hexToRgb(config.thresholds.whiteColor);
   const blackThresh = config.thresholds.blackThreshold;
   const whiteThresh = config.thresholds.whiteThreshold;
+  const hasCustomBlackTint = config.thresholds.blackColor.toLowerCase() !== '#000000';
+  const hasCustomWhiteTint = config.thresholds.whiteColor.toLowerCase() !== '#ffffff';
 
   if (targetStage === 'blackMask') {
     for (let p = 0, i = 0; i < work.length; p++, i += 4) {
@@ -726,6 +758,34 @@ export function runZatoPipeline(
         work[idx + 1] = clamp255(bg * invOp + blendedG * op);
         work[idx + 2] = clamp255(bb * invOp + blendedB * op);
         idx += 4;
+      }
+    }
+  }
+
+  // Re-apply custom (non-#000000 / non-#ffffff) Shadow & Highlight threshold tints on top of
+  // Colouring (when Colouring is active) so Step 3's custom tint pickers aren't wiped out by
+  // HSV / Gradient Map / Palettize, while still feeding into Curves, Noise & Posterize.
+  if (col.mode !== 'none') {
+    if (config.thresholds.blackEnabled && hasCustomBlackTint && config.thresholds.blackOpacity > 0) {
+      const op = clamp01(config.thresholds.blackOpacity);
+      const invOp = 1 - op;
+      for (let p = 0, i = 0; i < work.length; p++, i += 4) {
+        if (baseLuminance[p] <= blackThresh) {
+          work[i] = clamp255(work[i] * invOp + blackRgb[0] * op);
+          work[i + 1] = clamp255(work[i + 1] * invOp + blackRgb[1] * op);
+          work[i + 2] = clamp255(work[i + 2] * invOp + blackRgb[2] * op);
+        }
+      }
+    }
+    if (config.thresholds.whiteEnabled && hasCustomWhiteTint && config.thresholds.whiteOpacity > 0) {
+      const op = clamp01(config.thresholds.whiteOpacity);
+      const invOp = 1 - op;
+      for (let p = 0, i = 0; i < work.length; p++, i += 4) {
+        if (baseLuminance[p] >= whiteThresh) {
+          work[i] = clamp255(work[i] * invOp + whiteRgb[0] * op);
+          work[i + 1] = clamp255(work[i + 1] * invOp + whiteRgb[1] * op);
+          work[i + 2] = clamp255(work[i + 2] * invOp + whiteRgb[2] * op);
+        }
       }
     }
   }

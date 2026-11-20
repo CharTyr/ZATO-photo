@@ -7,6 +7,14 @@
 - **GitHub Pages**：https://chartyr.github.io/ZATO-photo/
 - **Cloudflare Workers**：https://zato-bg-generator.ichar.workers.dev
 
+## 实拍效果示例
+
+| | |
+| :---: | :---: |
+| ![工业烟囱](./docs/examples/01-factory-chimneys.png) | ![雨后门廊猫](./docs/examples/02-rainy-cat.png) |
+| ![斑驳路牌](./docs/examples/03-stop-sign.png) | ![雾天街区](./docs/examples/04-misty-blocks.png) |
+| ![苍绿屋舍](./docs/examples/05-sage-houses.png) | ![深蓝飞鸟](./docs/examples/06-blue-bird.png) |
+
 ## 功能特点
 
 - **开箱即用**：内置 10 套风格预设，实时生成当前照片的缩略图预览，一键切换。
